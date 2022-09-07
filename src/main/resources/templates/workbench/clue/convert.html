@@ -1,0 +1,234 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <base th:href="${#request.getContextPath()}+'/'">
+    <meta charset="UTF-8">
+
+    <link href="jquery/bootstrap_3.3.0/css/bootstrap.min.css" type="text/css" rel="stylesheet"/>
+    <script type="text/javascript" src="jquery/jquery-1.11.1-min.js"></script>
+    <script type="text/javascript" src="jquery/bootstrap_3.3.0/js/bootstrap.min.js"></script>
+
+
+    <link href="jquery/bootstrap-datetimepicker-master/css/bootstrap-datetimepicker.min.css" type="text/css"
+          rel="stylesheet"/>
+    <script type="text/javascript" src="jquery/bootstrap-datetimepicker-master/js/bootstrap-datetimepicker.js"></script>
+    <script type="text/javascript"
+            src="jquery/bootstrap-datetimepicker-master/locale/bootstrap-datetimepicker.zh-CN.js"></script>
+    <script type="text/javascript" src="vue/axios.min.js"></script>
+    <script type="text/javascript" src="vue/vue.js"></script>
+    <script type="text/javascript">
+        $(function () {
+            var vue = new Vue({
+                "el": "#tBody",
+                data: {
+                    activityList: []
+                },
+                methods: {
+                    //选择市场活动源
+                    chooseActivity:function (id,name) {
+                        $("#activityId").val(id);
+                        $("#activityName").val(name);
+                        //关闭模态窗口
+                        $("#searchActivityModal").modal("hide");
+                    }
+                }
+
+            });
+            $(".myDate").datetimepicker({
+                language:'zh-CN',
+                format:'yyyy-mm-dd',
+                minView:'month',	//可选择的最小视图
+                initData:new Date(),	//初始化显示的时间
+                autoclose:true,		//选择完自动关闭
+                todayBtn:true,		//显示今天的按钮
+                clearBtn:true		//显示清空按钮，但是是英文，改中文要在框架中修改
+            });
+
+            $("#isCreateTransaction").click(function () {
+                $("#transactionForm").get(0).reset();	//重置表单
+                if (this.checked) {
+                    $("#create-transaction2").show(200);
+                } else {
+                    $("#create-transaction2").hide(200);
+                }
+            });
+
+            $("#searchInput").keyup(function () {
+                //boostrap框架有bug，回车会白屏，所以要屏蔽回车
+                $(window).keydown(function (e) {
+                    if (e.keyCode === 13) {
+                        return false;
+                    }
+                });
+                //收集参数
+                var activityName = this.value;
+                var clueId = '[[${clue.id}]]';
+                if (activityName === '') {
+                    vue.activityList = [];
+                    return;
+                }
+                axios({
+                    method: "POST",
+                    url: "workbench/clue/queryActivityForConvertByNameClueId.do",
+                    params: {
+                        activityName: activityName,
+                        clueId: clueId
+                    }
+                })
+                    .then(function (value) {
+                        vue.activityList = value.data;
+                    })
+                    .catch(function (reason) {
+                        console.log(reason);
+                    });
+            });
+
+            $("#convertButton").click(function () {
+                var clueId = '[[${clue.id}]]';
+                var money = $.trim($("#amountOfMoney").val());
+                var name = $.trim($("#tradeName").val());
+                var expectedDate = $("#expectedClosingDate").val();
+                var stage = $("#stage").val();
+                var activityId = $("#activityId").val();
+                var isCreateTran = $("#isCreateTransaction").prop("checked");
+                //表单验证
+                var regExp = /^(([1-9]\d*)|0)$/;
+                if (isCreateTran!==false && !regExp.test(money)){
+                    alert("金额为非负整数");
+                    return;
+                }
+
+                axios({
+                    method:"POST",
+                    url:"workbench/clue/clueConvert.do",
+                    params: {
+                        clueId:clueId,
+                        money:money,
+                        name:name,
+                        expectedDate:expectedDate,
+                        stage:stage,
+                        activityId:activityId,
+                        isCreateTran:isCreateTran
+                    }
+                }).then(function (value) {
+                    if (value.data.code === "1"){
+                        //保存成功，返回线索首页
+                        window.location.href="workbench/clue/index.do";
+                    }else {
+                        alert(value.data.message);
+                    }
+                })
+                .catch(function (reason) {
+                    console.log(reason);
+                });
+            })
+        });
+    </script>
+
+</head>
+<body>
+
+<!-- 搜索市场活动的模态窗口 -->
+<div class="modal fade" id="searchActivityModal" role="dialog">
+    <div class="modal-dialog" role="document" style="width: 90%;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">
+                    <span aria-hidden="true">×</span>
+                </button>
+                <h4 class="modal-title">搜索市场活动</h4>
+            </div>
+            <div class="modal-body">
+                <div class="btn-group" style="position: relative; top: 18%; left: 8px;">
+                    <form class="form-inline" role="form">
+                        <div class="form-group has-feedback">
+                            <input type="text" class="form-control" style="width: 300px;" id="searchInput"
+                                   placeholder="请输入市场活动名称，支持模糊查询">
+                            <span class="glyphicon glyphicon-search form-control-feedback"></span>
+                        </div>
+                    </form>
+                </div>
+                <table id="activityTable" class="table table-hover" style="width: 900px; position: relative;top: 10px;">
+                    <thead>
+                    <tr style="color: #B3B3B3;">
+                        <td></td>
+                        <td>名称</td>
+                        <td>开始日期</td>
+                        <td>结束日期</td>
+                        <td>所有者</td>
+                        <td></td>
+                    </tr>
+                    </thead>
+                    <tbody id="tBody">
+                    <tr v-for="activity in activityList">
+                        <td><input type="radio"  name="activity" @click="chooseActivity(activity.id,activity.name)"/></td>
+                        <td>{{activity.name}}</td>
+                        <td>{{activity.startDate}}</td>
+                        <td>{{activity.endDate}}</td>
+                        <td>{{activity.owner}}</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="title" class="page-header" style="position: relative; left: 20px;">
+    <h4>转换线索 <small>[[${clue.fullname}]][[${clue.appellation}]]-[[${clue.company}]]</small></h4>
+</div>
+<div id="create-customer" style="position: relative; left: 40px; height: 35px;">
+    新建客户：[[${clue.company}]]
+</div>
+<div id="create-contact" style="position: relative; left: 40px; height: 35px;">
+    新建联系人：[[${clue.fullname}]][[${clue.appellation}]]
+</div>
+<div id="create-transaction1" style="position: relative; left: 40px; height: 35px; top: 25px;">
+    <input type="checkbox" id="isCreateTransaction"/>
+    为客户创建交易
+</div>
+<div id="create-transaction2"
+     style="position: relative; left: 40px; top: 20px; width: 80%; background-color: #F7F7F7; display: none;">
+
+    <form id="transactionForm">
+        <div class="form-group" style="width: 400px; position: relative; left: 20px;">
+            <label for="amountOfMoney">金额</label>
+            <input type="text" class="form-control" id="amountOfMoney">
+        </div>
+        <div class="form-group" style="width: 400px;position: relative; left: 20px;">
+            <label for="tradeName">交易名称</label>
+            <input type="text" class="form-control" id="tradeName" th:value="|${clue.company}-|">
+        </div>
+        <div class="form-group" style="width: 400px;position: relative; left: 20px;">
+            <label for="expectedClosingDate">预计成交日期</label>
+            <input type="text" class="form-control myDate" id="expectedClosingDate" readonly>
+        </div>
+        <div class="form-group" style="width: 400px;position: relative; left: 20px;">
+            <label for="stage">阶段</label>
+            <select id="stage" class="form-control">
+                <option></option>
+                <option th:each="stage:${stageList}" th:value="${stage.id}" th:text="${stage.value}"></option>
+            </select>
+        </div>
+        <div class="form-group" style="width: 400px;position: relative; left: 20px;">
+            <label for="activityName">市场活动源&nbsp;&nbsp;<a href="javascript:void(0);" data-toggle="modal"
+                                                      data-target="#searchActivityModal" style="text-decoration: none;"><span
+                    class="glyphicon glyphicon-search"></span></a></label>
+            <input type="hidden" id="activityId">
+            <input type="text" class="form-control" id="activityName" placeholder="点击上面搜索" readonly>
+        </div>
+    </form>
+
+</div>
+
+<div id="owner" style="position: relative; left: 40px; height: 35px; top: 50px;">
+    记录的所有者：<br>
+    <b>[[${clue.owner}]]</b>
+</div>
+<div id="operation" style="position: relative; left: 40px; height: 35px; top: 100px;">
+    <input class="btn btn-primary" type="button" value="转换" id="convertButton">
+    &nbsp;&nbsp;&nbsp;&nbsp;
+    <input class="btn btn-default" type="button" value="取消">
+</div>
+</body>
+</html>

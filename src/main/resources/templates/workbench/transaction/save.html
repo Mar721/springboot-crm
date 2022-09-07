@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <base th:href="${#request.getContextPath()}+'/'">
+    <meta charset="UTF-8">
+
+    <link href="jquery/bootstrap_3.3.0/css/bootstrap.min.css" type="text/css" rel="stylesheet"/>
+    <link href="jquery/bootstrap-datetimepicker-master/css/bootstrap-datetimepicker.min.css" type="text/css"
+          rel="stylesheet"/>
+
+    <script type="text/javascript" src="jquery/jquery-1.11.1-min.js"></script>
+    <script type="text/javascript" src="jquery/bootstrap_3.3.0/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="jquery/bs_typeahead/bootstrap3-typeahead.min.js"></script>
+    <script type="text/javascript" src="jquery/bootstrap-datetimepicker-master/js/bootstrap-datetimepicker.js"></script>
+    <script type="text/javascript"
+            src="jquery/bootstrap-datetimepicker-master/locale/bootstrap-datetimepicker.zh-CN.js"></script>
+    <script type="text/javascript" src="vue/axios.min.js"></script>
+    <script type="text/javascript" src="vue/vue.js"></script>
+    <script type="text/javascript">
+        $(function () {
+            var vue = new Vue({
+                el: "#hole",
+                data: {
+                    activityList: [],
+                    contactsList: []
+                },
+                methods: {
+                    //选择市场活动源
+                    chooseActivity: function (id, name) {
+                        $("#activityId").val(id);
+                        $("#create-activitySrc").val(name);
+                        //关闭模态窗口
+                        $("#findMarketActivity").modal("hide");
+                    },
+                    //选择联系人名称
+                    chooseContacts: function (id, name) {
+                        $("#contactsId").val(id);
+                        $("#create-contactsName").val(name);
+                        //关闭模态窗口
+                        $("#findContacts").modal("hide");
+                    },
+                }
+            })
+            ;
+            /**
+             * 日历插件  容器加载完后，对容器调用工具函数
+             */
+            $(".mydate").datetimepicker({
+                language: 'zh-CN',
+                format: 'yyyy-mm-dd',
+                minView: 'month',	//可选择的最小视图
+                initData: new Date(),	//初始化显示的时间
+                autoclose: true,		//选择完自动关闭
+                todayBtn: true,		//显示今天的按钮
+                clearBtn: true		//显示清空按钮，但是是英文，改中文要在框架中修改
+            });
+
+            //每个阶段的可能性可以通过配置文件配置
+            $("#create-stage").change(function () {
+                //var stageValue = $(this).find("option:selected").text();
+                var stageValue = $("#create-stage option:selected").text();
+                if (stageValue === "") {
+                    //clear
+                    $("#create-possibility").val("");
+                    return;
+                }
+                axios({
+                    method: "POST",
+                    url: "workbench/transaction/getPossibilityByStage.do",
+                    params: {
+                        stageValue: stageValue
+                    }
+                })
+                    .then(function (value) {
+                        $("#create-possibility").val(value.data + "%");
+                    })
+                    .catch(function () {
+
+                    });
+            });
+
+            //利用自动补全插件
+            $("#create-customerName").typeahead({
+                source: function (jquery, process) {
+                    axios({
+                        method: "POST",
+                        url: "workbench/transaction/queryCustomerNameByName.do",
+                        params: {
+                            customerName: jquery
+                        }
+                    })
+                        .then(function (value) {
+                            process(value.data);
+                        })
+                        .catch(function (reason) {
+
+                        });
+                }
+            });
+
+            //选择市场活动源
+            $("#searchActivity").keyup(function () {
+                $(window).keydown(function (e) {
+                    if (e.keyCode === 13) {
+                        return false;
+                    }
+                });
+                //收集参数
+                var activityName = this.value;
+                if (activityName === '') {
+                    vue.activityList = [];
+                    return;
+                }
+                axios({
+                    method: "POST",
+                    url: "workbench/transaction/queryActivityByName.do",
+                    params: {
+                        activityName: activityName,
+                    }
+                })
+                    .then(function (value) {
+                        vue.activityList = value.data;
+                    })
+                    .catch(function (reason) {
+                        console.log(reason);
+                    });
+            })
+
+            //选择联系人
+            $("#searchContacts").keyup(function () {
+                $(window).keydown(function (e) {
+                    if (e.keyCode === 13) {
+                        return false;
+                    }
+                });
+                //收集参数
+                var contactsName = this.value;
+                if (contactsName === '') {
+                    vue.contactsList = [];
+                    return;
+                }
+                axios({
+                    method: "POST",
+                    url: "workbench/transaction/queryContactsByName.do",
+                    params: {
+                        contactsName: contactsName,
+                    }
+                })
+                    .then(function (value) {
+                        vue.contactsList = value.data;
+                    })
+                    .catch(function (reason) {
+                        console.log(reason);
+                    });
+            })
+
+            $("#saveButton").click(function () {
+                //收集参数
+                var owner = $("#create-owner").val();
+                var money = $.trim($("#create-money").val());
+                var name = $.trim($("#create-name").val());
+                var expectedDate = $("#create-expectedDate").val();
+                var customerName = $.trim($("#create-customerName").val());
+                var stage = $("#create-stage").val();
+                var type = $("#create-type").val();
+                var source = $("#create-source").val();
+                var activityId = $("#activityId").val();
+                var contactsId = $("#contactsId").val();
+                var description = $.trim($("#create-description").val());
+                var contactSummary =$.trim( $("#create-contactSummary").val());
+                var nextContactTime = $("#create-nextContactTime").val();
+                //表单验证
+                axios({
+                    method:"POST",
+                    url:"workbench/transaction/saveCreateTran.do",
+                    params:{
+                        owner:owner,
+                        money:money,
+                        name:name,
+                        expectedDate:expectedDate,
+                        customerName:customerName,
+                        stage:stage,
+                        type:type,
+                        source:source,
+                        activityId:activityId,
+                        contactsId:contactsId,
+                        description:description,
+                        contactSummary:contactSummary,
+                        nextContactTime:nextContactTime
+                    }
+                }).then(function (value) {
+                    if (value.data.code === "1"){
+                        //返回
+                        window.location.href='workbench/transaction/index.do';
+                    }else {
+                        alert(data.message);
+                    }
+                })
+                    .catch(function (reason) {
+
+                    });
+            })
+        });
+    </script>
+</head>
+<body>
+<div id="hole">
+    <!-- 查找市场活动 -->
+    <div class="modal fade" id="findMarketActivity" role="dialog">
+        <div class="modal-dialog" role="document" style="width: 80%;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">
+                        <span aria-hidden="true">×</span>
+                    </button>
+                    <h4 class="modal-title">查找市场活动</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="btn-group" style="position: relative; top: 18%; left: 8px;">
+                        <form class="form-inline" role="form">
+                            <div class="form-group has-feedback">
+                                <input type="text" class="form-control" style="width: 300px;" id="searchActivity"
+                                       placeholder="请输入市场活动名称，支持模糊查询">
+                                <span class="glyphicon glyphicon-search form-control-feedback"></span>
+                            </div>
+                        </form>
+                    </div>
+                    <table id="activityTable3" class="table table-hover"
+                           style="width: 900px; position: relative;top: 10px;">
+                        <thead>
+                        <tr style="color: #B3B3B3;">
+                            <td></td>
+                            <td>名称</td>
+                            <td>开始日期</td>
+                            <td>结束日期</td>
+                            <td>所有者</td>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr v-for="activity in activityList">
+                            <td><input type="radio" name="activity" @click="chooseActivity(activity.id,activity.name)"/>
+                            </td>
+                            <td>{{activity.name}}</td>
+                            <td>{{activity.startDate}}</td>
+                            <td>{{activity.endDate}}</td>
+                            <td>{{activity.owner}}</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 查找联系人 -->
+    <div class="modal fade" id="findContacts" role="dialog">
+        <div class="modal-dialog" role="document" style="width: 80%;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">
+                        <span aria-hidden="true">×</span>
+                    </button>
+                    <h4 class="modal-title">查找联系人</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="btn-group" style="position: relative; top: 18%; left: 8px;">
+                        <form class="form-inline" role="form">
+                            <div class="form-group has-feedback">
+                                <input type="text" class="form-control" style="width: 300px;" placeholder="请输入联系人名称，支持模糊查询"
+                                       id="searchContacts">
+                                <span class="glyphicon glyphicon-search form-control-feedback"></span>
+                            </div>
+                        </form>
+                    </div>
+                    <table id="activityTable" class="table table-hover" style="width: 900px; position: relative;top: 10px;">
+                        <thead>
+                        <tr style="color: #B3B3B3;">
+                            <td></td>
+                            <td>名称</td>
+                            <td>邮箱</td>
+                            <td>手机</td>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr v-for="contacts in contactsList">
+                            <td><input type="radio" name="contacts" @click="chooseContacts(contacts.id,contacts.fullname)"/>
+                            </td>
+                            <td>{{contacts.fullname}}</td>
+                            <td>{{contacts.email}}</td>
+                            <td>{{contacts.mphone}}</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <div style="position:  relative; left: 30px;">
+        <h3>创建交易</h3>
+        <div style="position: relative; top: -40px; left: 70%;">
+            <button type="button" class="btn btn-primary" id="saveButton">保存</button>
+            <button type="button" class="btn btn-default" onclick="window.history.back();">取消</button>
+        </div>
+        <hr style="position: relative; top: -40px;">
+    </div>
+    <form class="form-horizontal" role="form" style="position: relative; top: -30px;">
+        <div class="form-group">
+            <label for="create-owner" class="col-sm-2 control-label">所有者<span
+                    style="font-size: 15px; color: red;">*</span></label>
+            <div class="col-sm-10" style="width: 300px;">
+                <select class="form-control" id="create-owner">
+                    <option th:each="user:${userList}" th:value="${user.id}">[[${user.name}]]</option>
+                </select>
+            </div>
+            <label for="create-money" class="col-sm-2 control-label">金额</label>
+            <div class="col-sm-10" style="width: 300px;">
+                <input type="text" class="form-control" id="create-money">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="create-name" class="col-sm-2 control-label">名称<span style="font-size: 15px; color: red;">*</span></label>
+            <div class="col-sm-10" style="width: 300px;">
+                <input type="text" class="form-control" id="create-name">
+            </div>
+            <label for="create-expectedDate" class="col-sm-2 control-label">预计成交日期<span
+                    style="font-size: 15px; color: red;">*</span></label>
+            <div class="col-sm-10" style="width: 300px;">
+                <input type="text" class="form-control mydate" id="create-expectedDate" readonly>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="create-customerName" class="col-sm-2 control-label">客户名称<span
+                    style="font-size: 15px; color: red;">*</span></label>
+            <div class="col-sm-10" style="width: 300px;">
+                <input type="text" class="form-control" id="create-customerName" placeholder="支持自动补全，输入客户不存在则新建">
+            </div>
+            <label for="create-stage" class="col-sm-2 control-label">阶段<span
+                    style="font-size: 15px; color: red;">*</span></label>
+            <div class="col-sm-10" style="width: 300px;">
+                <select class="form-control" id="create-stage">
+                    <option></option>
+                    <option th:each="stage:${stageList}" th:value="${stage.id}">[[${stage.value}]]</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="create-type" class="col-sm-2 control-label">类型</label>
+            <div class="col-sm-10" style="width: 300px;">
+                <select class="form-control" id="create-type">
+                    <option></option>
+                    <option th:each="tran:${transactionTypeList}" th:value="${tran.id}">[[${tran.value}]]</option>
+                </select>
+            </div>
+            <label for="create-possibility" class="col-sm-2 control-label">可能性</label>
+            <div class="col-sm-10" style="width: 300px;">
+                <input type="text" class="form-control" id="create-possibility" readonly>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="create-clueSource" class="col-sm-2 control-label">来源</label>
+            <div class="col-sm-10" style="width: 300px;">
+                <select class="form-control" id="create-source">
+                    <option></option>
+                    <option th:each="sour:${sourceList}" th:value="${sour.id}">[[${sour.value}]]</option>
+                </select>
+            </div>
+            <label for="create-activitySrc" class="col-sm-2 control-label">市场活动源&nbsp;&nbsp;<a href="javascript:void(0);"
+                                                                                               data-toggle="modal"
+                                                                                               data-target="#findMarketActivity"><span
+                    class="glyphicon glyphicon-search"></span></a></label>
+            <div class="col-sm-10" style="width: 300px;">
+                <input type="hidden" id="activityId">
+                <input type="text" class="form-control" id="create-activitySrc" placeholder="点击侧面搜索" readonly>
+            </div>
+
+        </div>
+
+        <div class="form-group">
+            <label for="create-contactsName" class="col-sm-2 control-label">联系人名称&nbsp;&nbsp;<a href="javascript:void(0);"
+                                                                                                data-toggle="modal"
+                                                                                                data-target="#findContacts"><span
+                    class="glyphicon glyphicon-search"></span></a></label>
+            <div class="col-sm-10" style="width: 300px;">
+                <input type="hidden" id="contactsId">
+                <input type="text" class="form-control" id="create-contactsName" placeholder="点击侧面搜索" readonly>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="create-description" class="col-sm-2 control-label">描述</label>
+            <div class="col-sm-10" style="width: 70%;">
+                <textarea class="form-control" rows="3" id="create-description"></textarea>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="create-contactSummary" class="col-sm-2 control-label">联系纪要</label>
+            <div class="col-sm-10" style="width: 70%;">
+                <textarea class="form-control" rows="3" id="create-contactSummary"></textarea>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="create-nextContactTime" class="col-sm-2 control-label">下次联系时间</label>
+            <div class="col-sm-10" style="width: 300px;">
+                <input type="text" class="form-control mydate" id="create-nextContactTime" readonly>
+            </div>
+        </div>
+
+    </form>
+</div>
+</body>
+</html>

@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <base th:href="${#request.getContextPath()}+'/'">
+    <meta charset="UTF-8">
+
+    <link href="jquery/bootstrap_3.3.0/css/bootstrap.min.css" type="text/css" rel="stylesheet"/>
+    <link href="jquery/bootstrap-datetimepicker-master/css/bootstrap-datetimepicker.min.css" type="text/css"
+          rel="stylesheet"/>
+    <link rel="stylesheet" type="text/css" href="jquery/bs_pagination-master/css/jquery.bs_pagination.min.css">
+
+    <script type="text/javascript" src="jquery/jquery-1.11.1-min.js"></script>
+    <script type="text/javascript" src="jquery/bootstrap_3.3.0/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="jquery/bootstrap-datetimepicker-master/js/bootstrap-datetimepicker.js"></script>
+    <script type="text/javascript"
+            src="jquery/bootstrap-datetimepicker-master/locale/bootstrap-datetimepicker.zh-CN.js"></script>
+    <script type="text/javascript" src="jquery/bs_pagination-master/js/jquery.bs_pagination.min.js"></script>
+    <script type="text/javascript" src="jquery/bs_pagination-master/localization/en.js"></script>
+    <script type="text/javascript" src="vue/axios.min.js"></script>
+    <script type="text/javascript" src="vue/vue.js"></script>
+    <script type="text/javascript">
+
+        $(function () {
+
+            var vue = new Vue({
+                "el": "#tBody",
+                data: {
+                    tranList: []
+                },
+                methods:{
+                    toDetail:function (id) {
+                        window.location.href="workbench/transaction/toTranDetail.do?tranId="+id;
+                    }
+                }
+            });
+
+
+            $("#createButton").click(function () {
+                window.location.href='workbench/transaction/toSave.do';
+            })
+            //分页 的 发送请求,主页加载完成显示第一页及数据总记录条数
+            //查询时，不做去空格，参数验证等，因为对系统只读，无写数据
+            queryTranByConditionForPage(1,10);
+
+            //给条件查询的查询 按钮 添加单击事件
+            $("#queryTranButton").click(function () {
+                queryTranByConditionForPage(1,$("#page").bs_pagination('getOption','rowsPerPage'));
+            });
+            /**
+             * 分页回调函数
+             * @param pageNo 页号
+             * @param pageSize 每页大小
+             */
+            function queryTranByConditionForPage(pageNo,pageSize) {
+                //收集参数
+                var owner = $("#owner").val();
+                var name = $("#name").val();
+                var customerName = $("#customerName").val();
+                var stage = $("#stage").val();
+                var type = $("#type").val();
+                var source = $("#create-source").val();
+                var contactsName = $("#contactsName").val();
+                //发送请求
+                axios({
+                    method: "POST",
+                    url:"workbench/transaction/queryTranByConditionForPage.do",
+                    params: {
+                        name:name,
+                        owner:owner,
+                        customerName:customerName,
+                        stage:stage,
+                        type:type,
+                        source:source,
+                        contactsName:contactsName,
+                        pageNo: pageNo,
+                        pageSize: pageSize
+                    }
+                })
+                    .then(function (value) {
+                        vue.tranList = value.data.tranList;
+
+                        //计算总页数
+                        var totalPages = 1;
+                        totalPages = Math.ceil(value.data.totalRows / pageSize);
+                        //对容器调用bs_pagination工具函数，显示翻页信息
+                        $("#page").bs_pagination({
+                            currentPage: pageNo,//当前页号,相当于pageNo
+
+                            rowsPerPage: pageSize,//每页显示条数,相当于pageSize
+                            totalRows: value.data.totalRows,//总条数
+                            totalPages: totalPages,  //总页数,必填参数.
+
+                            visiblePageLinks: 5,//最多可以显示的卡片数
+
+                            showGoToPage: true,//是否显示"跳转到"部分,默认true--显示
+                            showRowsPerPage: true,//是否显示"每页显示条数"部分。默认true--显示
+                            showRowsInfo: true,//是否显示记录的信息，默认true--显示
+
+                            //用户每次切换页号，都自动触发本函数;
+                            //每次返回切换页号之后的pageNo和pageSize
+                            onChangePage: function (event, pageObj) { // returns page_num and rows_per_page after a link has clicked
+                                queryTranByConditionForPage(pageObj.currentPage, pageObj.rowsPerPage);
+                            }
+                        });
+                    }).catch(function (reason) {
+                    console.log(reason);
+                });
+            }
+        });
+
+    </script>
+</head>
+<body>
+
+
+<div>
+    <div style="position: relative; left: 10px; top: -10px;">
+        <div class="page-header">
+            <h3>交易列表</h3>
+        </div>
+    </div>
+</div>
+
+<div style="position: relative; top: -20px; left: 0px; width: 100%; height: 100%;">
+
+    <div style="width: 100%; position: absolute;top: 5px; left: 10px;">
+
+        <div class="btn-toolbar" role="toolbar" style="height: 80px;">
+            <form class="form-inline" role="form" style="position: relative;top: 8%; left: 5px;">
+
+                <div class="form-group">
+                    <div class="input-group">
+                        <div class="input-group-addon">所有者</div>
+                        <input class="form-control" type="text" id="owner">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="input-group">
+                        <div class="input-group-addon">名称</div>
+                        <input class="form-control" type="text" id="name">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="input-group">
+                        <div class="input-group-addon">客户名称</div>
+                        <input class="form-control" type="text" id="customerName">
+                    </div>
+                </div>
+
+                <br>
+
+                <div class="form-group">
+                    <div class="input-group">
+                        <div class="input-group-addon">阶段</div>
+                        <select class="form-control" id="stage">
+                            <option></option>
+                            <option th:each="stage:${stageList}" th:value="${stage.id}" th:text="${stage.value}"></option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="input-group">
+                        <div class="input-group-addon">类型</div>
+                        <select class="form-control" id="type">
+                            <option></option>
+                            <option th:each="tran:${transactionTypeList}" th:value="${tran.id}" th:text="${tran.value}"></option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="input-group">
+                        <div class="input-group-addon">来源</div>
+                        <select class="form-control" id="create-source">
+                            <option></option>
+                            <option th:each="sour:${sourceList}" th:value="${sour.id}" th:text="${sour.value}"></option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="input-group">
+                        <div class="input-group-addon">联系人名称</div>
+                        <input class="form-control" type="text" id="contactsName">
+                    </div>
+                </div>
+
+                <button type="button" class="btn btn-default" id="queryTranButton">查询</button>
+                <button type="reset" class="btn btn-default">重置查询条件</button>
+            </form>
+        </div>
+        <div class="btn-toolbar" role="toolbar"
+             style="background-color: #F7F7F7; height: 50px; position: relative;top: 10px;">
+            <div class="btn-group" style="position: relative; top: 18%;">
+                <button type="button" class="btn btn-primary" id="createButton"><span
+                        class="glyphicon glyphicon-plus"></span> 创建
+                </button>
+                <button type="button" class="btn btn-default" onclick="window.location.href='edit.html';"><span
+                        class="glyphicon glyphicon-pencil"></span> 修改
+                </button>
+                <button type="button" class="btn btn-danger"><span class="glyphicon glyphicon-minus"></span> 删除</button>
+            </div>
+
+
+        </div>
+        <div style="position: relative;top: 10px;">
+            <table class="table table-hover">
+                <thead>
+                <tr style="color: #B3B3B3;">
+                    <td><input type="checkbox" id="checkAll"/></td>
+                    <td>名称</td>
+                    <td>客户名称</td>
+                    <td>阶段</td>
+                    <td>类型</td>
+                    <td>所有者</td>
+                    <td>来源</td>
+                    <td>联系人名称</td>
+                </tr>
+                </thead>
+                <tbody id="tBody">
+                <tr class="active" v-for="tran in tranList">
+                    <td><input type="checkbox"/></td>
+                    <td><a style="text-decoration: none; cursor: pointer;"
+                           @click="toDetail(tran.id)">{{tran.customerId}}-{{tran.name}}</a></td>
+                    <td>{{tran.name}}</td>
+                    <td>{{tran.stage}}</td>
+                    <td>{{tran.type}}</td>
+                    <td>{{tran.owner}}</td>
+                    <td>{{tran.source}}</td>
+                    <td>{{tran.contactsId}}</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div style="height: 50px; position: relative;top: 20px;">
+            <div id="page"></div>
+        </div>
+
+    </div>
+
+</div>
+</body>
+</html>

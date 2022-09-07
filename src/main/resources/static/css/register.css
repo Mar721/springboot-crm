@@ -1,0 +1,6 @@
+.errMess {
+    font-size: 12px;
+    color: red;
+    visibility: hidden;
+    margin: 2px 0;
+}

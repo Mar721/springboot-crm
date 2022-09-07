@@ -1,0 +1,16 @@
+mybatis:
+  configuration:
+    map-underscore-to-camel-case: true
+  type-aliases-package: crm.settings.pojo,crm.workbench.pojo
+spring:
+  datasource:
+    druid:
+      url: jdbc:mysql://localhost:3306/crm?rewriteBatchedStatements=true&serverTimezone=GMT&useAffectedRows=true
+      username: root
+      password: magical2001
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      initial-size: 2
+server:
+  port: 8000
+  servlet:
+    context-path: /crm/

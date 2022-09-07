@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base th:href="${#request.getContextPath()}+'/'">
+  <meta charset="UTF-8">
+  <link href="jquery/bootstrap_3.3.0/css/bootstrap.min.css" type="text/css" rel="stylesheet"/>
+  <link href="css/register.css" type="text/css" rel="stylesheet">
+  <script type="text/javascript" src="jquery/jquery-1.11.1-min.js"></script>
+  <script type="text/javascript" src="jquery/bootstrap_3.3.0/js/bootstrap.min.js"></script>
+  <script type="text/javascript" src="vue/axios.min.js"></script>
+  <script type="text/javascript" src="vue/vue.js"></script>
+  <script type="text/javascript" src="vue/register.js"></script>
+</head>
+<body>
+<div style="position: absolute; top: 0px; left: 0px; width: 60%;">
+  <img src="image/IMG_7114.JPG" style="width: 100%; height: 90%; position: relative; top: 50px;">
+</div>
+<div id="top" style="height: 50px; background-color: #3C3C3C; width: 100%;">
+  <div style="position: absolute; top: 5px; left: 0px; font-size: 30px; font-weight: 400; color: white; font-family: 'times new roman'">
+    CRM &nbsp;</div>
+</div>
+
+<div style="position: absolute; top: 120px; right: 100px;width:450px;height:500px;border:1px solid #D5D5D5">
+  <div style="position: absolute; top: 0px; right: 60px;">
+    <div class="page-header">
+      <h1>注册</h1>
+    </div>
+    <form class="form-horizontal" role="form" id="registerForm">
+      <div class="form-group form-group-lg">
+        <div style="width: 350px;">
+          <input id="unameTxt" class="form-control" type="text" v-model="uname" placeholder="用户名" @blur="ckUname()">
+          <span class="errMess" id="unameSpan">用户名应为6~16位数字和字母组成</span>
+        </div>
+        <div style="width: 350px; position: relative;top: 0px;">
+          <input class="form-control" type="text" v-model="trueName" placeholder="真实姓名">
+        </div>
+        <div style="width: 350px; position: relative;top: 20px;">
+          <input id="pwdTxt" class="form-control" type="password" v-model="passWord" placeholder="密码">
+          <span class="errMess" id="pwdSpan">密码的长度至少为8位</span>
+        </div>
+        <div style="width: 350px; position: relative;top: 20px;">
+          <input id="pwdTxt2" class="form-control" type="password" placeholder="确认密码">
+          <span class="errMess" id="pwdSpan2">密码两次输入不一致</span>
+        </div>
+        <button type="button" @click="register" class="btn btn-primary btn-lg btn-block"
+                style="width: 350px; position: relative;top: 20px;">注册
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+</body>
+</html>
